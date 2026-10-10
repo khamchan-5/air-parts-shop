@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="lo">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Air Parts | ລາຍການອາໄຫຼ່</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./index.html"><span class="brand-mark">AP</span><span>Air Parts<small>ລາຍການອາໄຫຼ່</small></span></a>
+    <a class="button button-outline" href="./admin.html">ເຂົ້າລະບົບຫຼັງຮ້ານ</a>
+  </header>
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">AIR CONDITIONING PARTS</p>
+      <h1>ຄົ້ນຫາອາໄຫຼ່ທີ່ທ່ານຕ້ອງການ</h1>
+      <p class="muted">ຄົ້ນຫາດ້ວຍຊື່, ລະຫັດສິນຄ້າ ຫຼື ໝວດໝູ່ ແລະເບິ່ງບ່ອນຈັດເກັບ</p>
+      <div class="search-row">
+        <input id="searchInput" type="search" placeholder="ເຊັ່ນ ຄອມແອ, RDX-001, ໄດຊາດ" autocomplete="off">
+        <select id="categoryFilter" aria-label="ເລືອກໝວດໝູ່">
+          <option value="">ທຸກໝວດໝູ່</option>
+          <option value="อะไหล่แอร์รถยนต์">ອາໄຫຼ່ແອລົດ</option>
+          <option value="อะไหล่แอร์บ้าน">ອາໄຫຼ່ແອເຮືອນ</option>
+          <option value="ไดสตาร์ท">ໄດສະຕາດ</option>
+          <option value="ไดชาร์จ">ໄດຊາດ</option>
+          <option value="อุปกรณ์ไฟฟ้า">ອຸປະກອນໄຟຟ້າ</option>
+          <option value="อื่น ๆ">ອື່ນໆ</option>
+        </select>
+      </div>
+      <label class="upload-search">
+        <span>ຄົ້ນຫາດ້ວຍຮູບພາບ (ຟັງຊັນທົດລອງ)</span>
+        <input id="imageSearchInput" type="file" accept="image/*">
+      </label>
+      <p id="imageSearchStatus" class="small muted">ເລືອກຮູບເພື່ອຄົ້ນຫາສິນຄ້າທີ່ມີຮູບຄ້າຍກັນ. ລະບົບລຸ້ນເລີ່ມຕົ້ນນີ້ປຽບທຽບສີ ແລະ ລັກສະນະຮູບພາບແບບງ່າຍໆ</p>
+    </section>
+
+    <section class="section-heading">
+      <div><h2>ລາຍການສິນຄ້າ</h2><p id="resultCount" class="muted small">ກຳລັງໂຫຼດສິນຄ້າ…</p></div>
+    </section>
+    <div id="loading" class="empty-state">ກຳລັງເຊື່ອມຕໍ່ຖານຂໍ້ມູນ…</div>
+    <div id="productGrid" class="product-grid"></div>
+    <div id="emptyState" class="empty-state hidden">ບໍ່ພົບສິນຄ້າ ລອງຄົ້ນຫາດ້ວຍຄຳອື່ນ ຫຼື ເລືອກໝວດໝູ່ໃໝ່</div>
+    <p id="errorMessage" class="error hidden"></p>
+  </main>
+  <footer class="footer">Air Parts · ລະບົບລາຍການອາໄຫຼ່</footer>
+  <script src="./js/image-search.js"></script>
+  <script type="module" src="./js/catalog.js"></script>
+</body>
+</html>

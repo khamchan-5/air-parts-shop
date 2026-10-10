@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="lo">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ຈັດການສິນຄ້າ | Air Parts</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./index.html"><span class="brand-mark">AP</span><span>Air Parts<small>ຫຼັງຮ້ານ / ຈັດການສິນຄ້າ</small></span></a>
+    <div class="header-actions">
+      <a class="button button-outline" href="./index.html">ເບິ່ງໜ້າຮ້ານ</a>
+      <button id="logoutButton" class="button button-dark hidden" type="button">ອອກຈາກລະບົບ</button>
+    </div>
+  </header>
+
+  <main class="container admin-container">
+    <section id="loginPanel" class="panel login-panel">
+      <p class="eyebrow">OWNER ACCESS</p>
+      <h1>ເຂົ້າລະບົບເຈົ້າຂອງຮ້ານ</h1>
+      <p class="muted">ໃຊ້ອີເມວທີ່ຕັ້ງຄ່າໄວ້ໃນ Firebase Authentication</p>
+      <form id="loginForm" class="form-stack">
+        <label>ອີເມວ<input id="loginEmail" type="email" autocomplete="username" required></label>
+        <label>ລະຫັດຜ່ານ<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+        <button class="button button-primary" type="submit">ເຂົ້າລະບົບ</button>
+        <p id="loginMessage" class="error hidden"></p>
+      </form>
+    </section>
+
+    <section id="adminPanel" class="hidden">
+      <div class="section-heading">
+        <div><p class="eyebrow">INVENTORY</p><h1>ຈັດການສິນຄ້າ</h1><p class="muted">ເພີ່ມສິນຄ້າໃໝ່ ຫຼື ແກ້ໄຂຂໍ້ມູນເດີມ</p></div>
+      </div>
+      <div class="admin-layout">
+        <section class="panel">
+          <h2 id="formTitle">ເພີ່ມສິນຄ້າ</h2>
+          <form id="productForm" class="form-stack">
+            <input id="productId" type="hidden">
+            <label>ຊື່ສິນຄ້າ *<input id="productName" required maxlength="120" placeholder="ເຊັ່ນ ຄອມເພຣສເຊີແອ"></label>
+            <label>ລະຫັດສິນຄ້າ *<input id="productCode" required maxlength="60" placeholder="ເຊັ່ນ AC-001"></label>
+            <label>ໝວດໝູ່ *
+              <select id="productCategory" required>
+                <option value="">ເລືອກໝວດໝູ່</option>
+                <option value="อะไหล่แอร์รถยนต์">ອາໄຫຼ່ແອລົດ</option>
+                <option value="อะไหล่แอร์บ้าน">ອາໄຫຼ່ແອເຮືອນ</option>
+                <option value="ไดสตาร์ท">ໄດສະຕາດ</option>
+                <option value="ไดชาร์จ">ໄດຊາດ</option>
+                <option value="อุปกรณ์ไฟฟ้า">ອຸປະກອນໄຟຟ້າ</option>
+                <option value="อื่น ๆ">ອື່ນໆ</option>
+              </select>
+            </label>
+            <div class="form-two">
+              <label>ລາຄາ<input id="productPrice" type="number" min="0" step="0.01" value="0" required></label>
+              <label>ຈຳນວນຄົງເຫຼືອ<input id="productQuantity" type="number" min="0" step="1" value="0" required></label>
+            </div>
+            <label>ບ່ອນຈັດເກັບ<input id="productLocation" maxlength="100" placeholder="ເຊັ່ນ ຊັ້ນ A / ກ່ອງ 03"></label>
+            <label>ລາຍລະອຽດເພີ່ມເຕີມ<textarea id="productDescription" rows="3" maxlength="500" placeholder="ຍີ່ຫໍ້, ຮຸ່ນ ຫຼື ໝາຍເຫດ"></textarea></label>
+            <label>ຮູບສິນຄ້າ<input id="productImage" type="file" accept="image/*"></label>
+            <p class="small muted">ຖ້າແກ້ໄຂສິນຄ້າແລ້ວບໍ່ເລືອກຮູບໃໝ່ ລະບົບຈະເກັບຮູບເກົ່າໄວ້</p>
+            <div class="form-actions">
+              <button class="button button-primary" type="submit" id="saveButton">ບັນທຶກສິນຄ້າ</button>
+              <button class="button button-outline hidden" type="button" id="cancelEditButton">ຍົກເລີກການແກ້ໄຂ</button>
+            </div>
+            <p id="formMessage" class="small"></p>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading compact">
+            <div><h2>ສິນຄ້າໃນລະບົບ</h2><p id="adminCount" class="small muted">0 ລາຍການ</p></div>
+            <input id="adminSearch" class="admin-search" type="search" placeholder="ຄົ້ນຫາສິນຄ້າ…">
+          </div>
+          <div id="adminProductList" class="admin-product-list"></div>
+          <p id="adminError" class="error hidden"></p>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./js/admin.js"></script>
+</body>
+</html>
