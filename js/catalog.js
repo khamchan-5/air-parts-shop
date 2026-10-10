@@ -1,8 +1,9 @@
 import { db } from "./firebase.js";
 import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { CATEGORY_DEFINITIONS, categoryLabel, categoryIcon, categoryOptions } from "./categories.js";
 
 const searchInput = document.querySelector("#searchInput");
-const categoryFilter = document.querySelector("#categoryFilter");
+const categoryGrid = document.querySelector("#categoryGrid");
 const productGrid = document.querySelector("#productGrid");
 const loading = document.querySelector("#loading");
 const emptyState = document.querySelector("#emptyState");
@@ -10,37 +11,45 @@ const resultCount = document.querySelector("#resultCount");
 const errorMessage = document.querySelector("#errorMessage");
 const imageSearchInput = document.querySelector("#imageSearchInput");
 const imageSearchStatus = document.querySelector("#imageSearchStatus");
+const clearCategoryButton = document.querySelector("#clearCategory");
 let products = [];
 let imageQuery = null;
+let selectedCategory = "";
 
 const money = (value) => new Intl.NumberFormat("lo-LA", { maximumFractionDigits: 2 }).format(Number(value || 0));
+function normalize(value) { return String(value ?? "").toLocaleLowerCase("lo").trim(); }
 
-const categoryLabels = {
-  "อะไหล่แอร์รถยนต์": "ອາໄຫຼ່ແອລົດ",
-  "อะไหล่แอร์บ้าน": "ອາໄຫຼ່ແອເຮືອນ",
-  "ไดสตาร์ท": "ໄດສະຕາດ",
-  "ไดชาร์จ": "ໄດຊາດ",
-  "อุปกรณ์ไฟฟ้า": "ອຸປະກອນໄຟຟ້າ",
-  "อื่น ๆ": "ອື່ນໆ"
-};
-function categoryLabel(value) { return categoryLabels[value] || value || "ບໍ່ລະບຸໝວດໝູ່"; }
-
-function normalize(value) {
-  return String(value ?? "").toLocaleLowerCase("lo").trim();
+function renderCategories() {
+  const values = categoryOptions(products);
+  const definitions = values.map(value => CATEGORY_DEFINITIONS.find(item => item.value === value) || { value, label: categoryLabel(value), icon: categoryIcon(value) });
+  const allCategory = CATEGORY_DEFINITIONS.find(item => item.value === "");
+  const categories = [allCategory, ...definitions];
+  categoryGrid.innerHTML = "";
+  for (const category of categories) {
+    const count = category.value ? products.filter(p => p.category === category.value).length : products.length;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `category-tile${selectedCategory === category.value ? " is-active" : ""}`;
+    button.setAttribute("aria-pressed", String(selectedCategory === category.value));
+    button.innerHTML = `<span class="category-icon" aria-hidden="true">${escapeHtml(category.icon)}</span><span class="category-label">${escapeHtml(category.label)}</span><span class="category-count">${count} ລາຍການ</span>`;
+    button.addEventListener("click", () => {
+      selectedCategory = category.value;
+      renderCategories();
+      renderProducts();
+      document.querySelector(".product-section-heading")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    categoryGrid.appendChild(button);
+  }
+  clearCategoryButton.classList.toggle("hidden", !selectedCategory);
 }
 
-function render() {
+function renderProducts() {
   const query = normalize(searchInput.value);
-  const category = categoryFilter.value;
   let filtered = products.filter(p => {
     const text = [p.name, p.code, p.category, p.location, p.description].map(normalize).join(" ");
-    return (!query || text.includes(query)) && (!category || p.category === category);
+    return (!query || text.includes(query)) && (!selectedCategory || p.category === selectedCategory);
   });
-
-  // When a query image is selected, rank products by simple color-histogram similarity.
-  if (imageQuery && window.rankProductsByImage) {
-    filtered = window.rankProductsByImage(imageQuery, filtered);
-  }
+  if (imageQuery && window.rankProductsByImage) filtered = window.rankProductsByImage(imageQuery, filtered);
 
   productGrid.innerHTML = "";
   resultCount.textContent = `ພົບ ${filtered.length} ລາຍການ`;
@@ -63,14 +72,19 @@ function render() {
     productGrid.appendChild(card);
   }
 }
+function render() { renderCategories(); renderProducts(); }
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 function escapeAttr(s) { return escapeHtml(s); }
 
-searchInput.addEventListener("input", render);
-categoryFilter.addEventListener("change", render);
-document.addEventListener("airparts-image-signatures-ready", render);
+searchInput.addEventListener("input", renderProducts);
+clearCategoryButton.addEventListener("click", () => {
+  selectedCategory = "";
+  renderCategories();
+  renderProducts();
+});
+document.addEventListener("airparts-image-signatures-ready", renderProducts);
 
 onValue(ref(db, "products"), snapshot => {
   const data = snapshot.val() || {};
@@ -85,7 +99,7 @@ onValue(ref(db, "products"), snapshot => {
 
 imageSearchInput.addEventListener("change", async () => {
   const file = imageSearchInput.files?.[0];
-  if (!file) { imageQuery = null; render(); return; }
+  if (!file) { imageQuery = null; renderProducts(); return; }
   if (!file.type.startsWith("image/")) {
     imageSearchStatus.textContent = "ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ";
     return;
@@ -95,7 +109,7 @@ imageSearchInput.addEventListener("change", async () => {
     const image = await createImageBitmap(file);
     imageQuery = await window.getImageSignature(image);
     imageSearchStatus.textContent = "ຈັດລຽງສິນຄ້າທີ່ມີສີ ແລະ ລັກສະນະຮູບຄ້າຍກັນກ່ອນ (ເປັນການຄົ້ນຫາເບື້ອງຕົ້ນ ບໍ່ແມ່ນ AI ລະບຸຮຸ່ນອາໄຫຼ່)";
-    render();
+    renderProducts();
   } catch (e) {
     imageSearchStatus.textContent = "ວິເຄາະຮູບພາບບໍ່ສຳເລັດ ລອງໃຊ້ຮູບອື່ນ";
   }
