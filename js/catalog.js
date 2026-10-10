@@ -9,9 +9,13 @@ const loading = document.querySelector("#loading");
 const emptyState = document.querySelector("#emptyState");
 const resultCount = document.querySelector("#resultCount");
 const errorMessage = document.querySelector("#errorMessage");
-const imageSearchInput = document.querySelector("#imageSearchInput");
+const imageSearchCamera = document.querySelector("#imageSearchCamera");
+const imageSearchGallery = document.querySelector("#imageSearchGallery");
+const imageCameraButton = document.querySelector("#imageCameraButton");
+const imageGalleryButton = document.querySelector("#imageGalleryButton");
 const imageSearchStatus = document.querySelector("#imageSearchStatus");
 const clearCategoryButton = document.querySelector("#clearCategory");
+const categoryToggle = document.querySelector("#categoryToggle");
 let products = [];
 let imageQuery = null;
 let selectedCategory = "";
@@ -84,6 +88,11 @@ clearCategoryButton.addEventListener("click", () => {
   renderCategories();
   renderProducts();
 });
+categoryToggle.addEventListener("click", () => {
+  const expanded = categoryGrid.classList.toggle("is-expanded");
+  categoryToggle.setAttribute("aria-expanded", String(expanded));
+  categoryToggle.querySelector("span").textContent = expanded ? "⌃" : "⌄";
+});
 document.addEventListener("airparts-image-signatures-ready", renderProducts);
 
 onValue(ref(db, "products"), snapshot => {
@@ -97,8 +106,11 @@ onValue(ref(db, "products"), snapshot => {
   errorMessage.classList.remove("hidden");
 });
 
-imageSearchInput.addEventListener("change", async () => {
-  const file = imageSearchInput.files?.[0];
+imageCameraButton.addEventListener("click", () => imageSearchCamera.click());
+imageGalleryButton.addEventListener("click", () => imageSearchGallery.click());
+
+async function handleImageSearchChange(event) {
+  const file = event.currentTarget.files?.[0];
   if (!file) { imageQuery = null; renderProducts(); return; }
   if (!file.type.startsWith("image/")) {
     imageSearchStatus.textContent = "ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ";
@@ -113,4 +125,6 @@ imageSearchInput.addEventListener("change", async () => {
   } catch (e) {
     imageSearchStatus.textContent = "ວິເຄາະຮູບພາບບໍ່ສຳເລັດ ລອງໃຊ້ຮູບອື່ນ";
   }
-});
+}
+imageSearchCamera.addEventListener("change", handleImageSearchChange);
+imageSearchGallery.addEventListener("change", handleImageSearchChange);

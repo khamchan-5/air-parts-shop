@@ -19,16 +19,22 @@
       <div class="search-row search-row-single">
         <input id="searchInput" type="search" placeholder="ເຊັ່ນ ຄອມແອ, RDX-001, ໄດຊາດ" autocomplete="off">
       </div>
-      <label class="upload-search">
-        <span>ຄົ້ນຫາດ້ວຍຮູບພາບ (ຟັງຊັນທົດລອງ)</span>
-        <input id="imageSearchInput" type="file" accept="image/*">
-      </label>
+      <div class="image-search-tools">
+        <p class="image-tools-title">ຄົ້ນຫາດ້ວຍຮູບພາບ (ຟັງຊັນທົດລອງ)</p>
+        <div class="image-action-buttons">
+          <button id="imageCameraButton" class="button button-primary image-action-button" type="button"><span aria-hidden="true">📷</span> ຖ່າຍຮູບດ້ວຍກ້ອງ</button>
+          <button id="imageGalleryButton" class="button button-outline image-action-button" type="button"><span aria-hidden="true">🖼️</span> ເລືອກຮູບຈາກເຄື່ອງ</button>
+        </div>
+        <input id="imageSearchCamera" class="visually-hidden-file" type="file" accept="image/*" capture="environment">
+        <input id="imageSearchGallery" class="visually-hidden-file" type="file" accept="image/*">
+      </div>
       <p id="imageSearchStatus" class="small muted">ເລືອກຮູບເພື່ອຄົ້ນຫາສິນຄ້າທີ່ມີຮູບຄ້າຍກັນ. ລະບົບລຸ້ນເລີ່ມຕົ້ນນີ້ປຽບທຽບສີ ແລະ ລັກສະນະຮູບພາບແບບງ່າຍໆ</p>
     </section>
 
     <section class="category-section" aria-labelledby="categoryHeading">
       <div class="category-section-heading">
-        <div><p class="eyebrow">BROWSE BY CATEGORY</p><h2 id="categoryHeading">ເລືອກໝວດໝູ່ອາໄຫຼ່</h2><p class="muted small">ແຕະເພື່ອເບິ່ງສິນຄ້າໃນໝວດນັ້ນ</p></div>
+        <div><p class="eyebrow">BROWSE BY CATEGORY</p><h2 id="categoryHeading">ເລືອກໝວດໝູ່ອາໄຫຼ່</h2><p class="muted small category-hint">ແຕະເພື່ອເບິ່ງສິນຄ້າໃນໝວດນັ້ນ</p></div>
+        <button id="categoryToggle" class="button button-outline category-toggle" type="button" aria-expanded="false" aria-controls="categoryGrid">☷ ໝວດໝູ່ <span aria-hidden="true">⌄</span></button>
       </div>
       <div id="categoryGrid" class="category-grid" aria-label="ໝວດໝູ່ສິນຄ້າ"></div>
     </section>

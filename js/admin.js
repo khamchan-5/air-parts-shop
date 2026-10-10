@@ -23,8 +23,25 @@ const adminSearch = document.querySelector("#adminSearch");
 const cancelEditButton = document.querySelector("#cancelEditButton");
 const saveButton = document.querySelector("#saveButton");
 let products = [];
+let selectedProductImage = null;
 
 const field = id => document.getElementById(id);
+field("productCameraButton").addEventListener("click", () => field("productImageCamera").click());
+field("productGalleryButton").addEventListener("click", () => field("productImage").click());
+function setSelectedProductImage(file) {
+  selectedProductImage = file || null;
+  field("productImageStatus").textContent = selectedProductImage
+    ? `ເລືອກແລ້ວ: ${selectedProductImage.name} (${(selectedProductImage.size / 1024 / 1024).toFixed(2)} MB)`
+    : "ຍັງບໍ່ໄດ້ເລືອກຮູບ (ສູງສຸດ 5 MB)";
+}
+field("productImage").addEventListener("change", event => {
+  const file = event.target.files?.[0];
+  if (file) { field("productImageCamera").value = ""; setSelectedProductImage(file); }
+});
+field("productImageCamera").addEventListener("change", event => {
+  const file = event.target.files?.[0];
+  if (file) { field("productImage").value = ""; setSelectedProductImage(file); }
+});
 const money = value => new Intl.NumberFormat("lo-LA", { maximumFractionDigits: 2 }).format(Number(value || 0));
 const categoryLabelFallback = value => categoryLabel(value);
 function refreshCategoryOptions(selected = "") {
@@ -138,6 +155,8 @@ function startEdit(id) {
   field("productLocation").value = p.location || "";
   field("productDescription").value = p.description || "";
   field("productImage").value = "";
+  field("productImageCamera").value = "";
+  setSelectedProductImage(null);
   field("formTitle").textContent = "ແກ້ໄຂສິນຄ້າ";
   saveButton.textContent = "ບັນທຶກການແກ້ໄຂ";
   cancelEditButton.classList.remove("hidden");
@@ -150,6 +169,9 @@ function resetForm() {
   field("productPrice").value = "0";
   field("productQuantity").value = "0";
   field("customCategory").value = "";
+  field("productImage").value = "";
+  field("productImageCamera").value = "";
+  setSelectedProductImage(null);
   refreshCategoryOptions("");
   field("formTitle").textContent = "ເພີ່ມສິນຄ້າ";
   saveButton.textContent = "ບັນທຶກສິນຄ້າ";
@@ -166,7 +188,7 @@ productForm.addEventListener("submit", async event => {
   try {
     const id = field("productId").value || push(dbRef(db, "products")).key;
     const old = products.find(p => p.id === id);
-    const file = field("productImage").files?.[0];
+    const file = selectedProductImage;
     let imageUrl = old?.imageUrl || "";
     let imagePath = old?.imagePath || "";
 
