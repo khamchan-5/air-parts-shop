@@ -69,7 +69,7 @@ function renderProducts() {
       <div class="product-code">${escapeHtml(p.code || "ບໍ່ມີລະຫັດ")}</div>
       <h3>${escapeHtml(p.name || "ສິນຄ້າບໍ່ມີຊື່")}</h3>
       <span class="tag">${escapeHtml(categoryLabel(p.category))}</span>
-      <div class="price">${money(p.price)}</div>
+      <div class="price">${p.priceStatus === "needs_confirmation" && Number(p.price || 0) === 0 ? "ລໍຖ້າກຳນົດລາຄາ" : money(p.price)}</div>
       <div class="product-meta"><span>ຄົງເຫຼືອ ${Number(p.quantity || 0)}</span><span>${escapeHtml(p.location || "ຍັງບໍ່ລະບຸບ່ອນເກັບ")}</span></div>
       ${p.description ? `<div class="location">${escapeHtml(p.description)}</div>` : ""}
     </div>`;

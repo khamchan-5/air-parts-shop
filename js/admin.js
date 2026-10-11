@@ -7,7 +7,7 @@ import {
   ref as dbRef, push, set, update, remove, onValue
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 import {
-  ref as storageRef, uploadBytes, getDownloadURL, deleteObject
+  ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 const loginPanel = document.querySelector("#loginPanel");
@@ -42,6 +42,43 @@ field("productImageCamera").addEventListener("change", event => {
   const file = event.target.files?.[0];
   if (file) { field("productImage").value = ""; setSelectedProductImage(file); }
 });
+const importCatalogButton = document.querySelector("#importCatalogButton");
+const importCatalogStatus = document.querySelector("#importCatalogStatus");
+if (importCatalogButton) importCatalogButton.addEventListener("click", async () => {
+  if (!auth.currentUser) return;
+  importCatalogButton.disabled = true;
+  importCatalogStatus.textContent = "ກຳລັງກວດສອບລາຍການສິນຄ້າ…";
+  try {
+    const response = await fetch("./data/product-import-template.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("ໂຫຼດໄຟລ໌ຂໍ້ມູນບໍ່ສຳເລັດ");
+    const template = await response.json();
+    const existingCodes = new Set(products.map(p => String(p.code || "").trim().toUpperCase()));
+    const pending = template.filter(p => !existingCodes.has(String(p.code || "").trim().toUpperCase()));
+    if (!pending.length) {
+      importCatalogStatus.textContent = "ມີລາຍການຄົບແລ້ວ ບໍ່ໄດ້ເພີ່ມຊ້ຳ";
+      return;
+    }
+    let done = 0;
+    for (const item of pending) {
+      const key = push(dbRef(db, "products")).key;
+      await withTimeout(set(dbRef(db, `products/${key}`), {
+        name: item.name, code: item.code, category: item.category,
+        price: item.price, quantity: item.quantity, location: item.location,
+        description: item.description, imageUrl: item.imageUrl,
+        priceStatus: item.priceStatus, quantityStatus: item.quantityStatus,
+        sourceImage: item.sourceImage
+      }), 20000, `ບັນທຶກ ${item.code} ບໍ່ສຳເລັດ`);
+      done++;
+      importCatalogStatus.textContent = `ນຳເຂົ້າແລ້ວ ${done}/${pending.length} ລາຍການ`;
+    }
+    importCatalogStatus.textContent = `ນຳເຂົ້າສຳເລັດ ${done} ລາຍການ`;
+  } catch (error) {
+    importCatalogStatus.textContent = `ນຳເຂົ້າບໍ່ສຳເລັດ: ${error.message || error}`;
+  } finally {
+    importCatalogButton.disabled = false;
+  }
+});
+
 const money = value => new Intl.NumberFormat("lo-LA", { maximumFractionDigits: 2 }).format(Number(value || 0));
 const categoryLabelFallback = value => categoryLabel(value);
 function refreshCategoryOptions(selected = "") {
@@ -180,14 +217,109 @@ function resetForm() {
 }
 cancelEditButton.addEventListener("click", resetForm);
 
+// Shrink large camera photos before upload to reduce waiting on mobile networks.
+async function prepareImageForUpload(file) {
+  if (!file || !file.type.startsWith("image/")) return file;
+  if (file.type !== "image/jpeg" && file.type !== "image/jpg") return file;
+  if (file.size < 900 * 1024) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const maxSide = 1600;
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d", { alpha: false });
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.78));
+    return blob && blob.size < file.size
+      ? new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg", lastModified: Date.now() })
+      : file;
+  } catch (error) {
+    console.warn("ຫຍໍ້ຮູບບໍ່ສຳເລັດ ຈະອັບໂຫຼດຮູບຕົ້ນສະບັບ:", error);
+    return file;
+  }
+}
+
+function waitForFirebaseConnection(timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    const timer = setTimeout(() => finish(new Error("ເຊື່ອມຕໍ່ Firebase ບໍ່ສຳເລັດ ຫຼື ອິນເຕີເນັດຊ້າເກີນໄປ. ກະລຸນາກວດເນັດແລ້ວລອງໃໝ່")), timeoutMs);
+    function finish(error, connected = false) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      if (error) reject(error); else resolve(connected);
+    }
+    unsubscribe = onValue(dbRef(db, ".info/connected"), snapshot => {
+      if (snapshot.val() === true) finish(null, true);
+    }, error => finish(new Error(`ກວດການເຊື່ອມຕໍ່ Firebase ບໍ່ໄດ້: ${error.message}`)));
+  });
+}
+
+function withTimeout(promise, timeoutMs, message, onTimeout) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try { onTimeout?.(); } catch (_) {}
+      reject(new Error(message));
+    }, timeoutMs);
+    promise.then(value => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    }, error => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function uploadImageWithProgress(target, file) {
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(target, file, { contentType: file.type });
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      task.cancel();
+      reject(new Error("ອັບໂຫຼດຮູບໃຊ້ເວລາເກີນ 60 ວິນາທີ. ກະລຸນາກວດອິນເຕີເນັດແລ້ວລອງໃໝ່"));
+    }, 60000);
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error); else resolve(value);
+    };
+    task.on("state_changed", snapshot => {
+      const percent = snapshot.totalBytes ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0;
+      const transferred = (snapshot.bytesTransferred / 1024 / 1024).toFixed(2);
+      const total = (snapshot.totalBytes / 1024 / 1024).toFixed(2);
+      formMessage.textContent = `ກຳລັງອັບໂຫຼດຮູບ ${percent}% (${transferred}/${total} MB)`;
+    }, error => finish(error), () => finish(null, task.snapshot));
+  });
+}
+
 productForm.addEventListener("submit", async event => {
   event.preventDefault();
-  formMessage.textContent = "ກຳລັງບັນທຶກ…";
+  formMessage.textContent = "ກຳລັງກວດຂໍ້ມູນ…";
   formMessage.className = "small muted";
   saveButton.disabled = true;
   try {
     const id = field("productId").value || push(dbRef(db, "products")).key;
+    // Keep the same key if a connection times out, so a retry cannot create a duplicate product.
+    field("productId").value = id;
     const old = products.find(p => p.id === id);
+    formMessage.textContent = "ກຳລັງກວດການເຊື່ອມຕໍ່…";
+    await waitForFirebaseConnection();
     const file = selectedProductImage;
     let imageUrl = old?.imageUrl || "";
     let imagePath = old?.imagePath || "";
@@ -195,11 +327,19 @@ productForm.addEventListener("submit", async event => {
     if (file) {
       if (!file.type.startsWith("image/")) throw new Error("ໄຟລ໌ທີ່ເລືອກບໍ່ແມ່ນຮູບພາບ");
       if (file.size > 5 * 1024 * 1024) throw new Error("ຮູບພາບຕ້ອງມີຂະໜາດບໍ່ເກີນ 5 MB");
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "photo.jpg";
+      formMessage.textContent = "ກຳລັງກຽມຮູບພາບ…";
+      const uploadFile = await prepareImageForUpload(file);
+      const safeName = uploadFile.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "photo.jpg";
       imagePath = `products/${id}/${Date.now()}_${safeName}`;
       const target = storageRef(storage, imagePath);
-      await uploadBytes(target, file, { contentType: file.type });
-      imageUrl = await getDownloadURL(target);
+      await uploadImageWithProgress(target, uploadFile);
+      formMessage.textContent = "ອັບໂຫຼດຮູບສຳເລັດ ກຳລັງຮັບລິ້ງຮູບ…";
+      imageUrl = await withTimeout(
+        getDownloadURL(target), 15000,
+        "ອັບໂຫຼດຮູບແລ້ວ ແຕ່ຮັບລິ້ງຮູບບໍ່ສຳເລັດ. ກະລຸນາກວດ Firebase Storage Rules"
+      );
+    } else {
+      formMessage.textContent = "ກຳລັງບັນທຶກຂໍ້ມູນ…";
     }
 
     const payload = {
@@ -218,17 +358,25 @@ productForm.addEventListener("submit", async event => {
     };
     if (!payload.name || !payload.code || !payload.category || payload.category === "__custom__") throw new Error("ກະລຸນາປ້ອນຊື່, ລະຫັດ ແລະ ໝວດໝູ່ສິນຄ້າ");
     if (payload.category.length > 80) throw new Error("ຊື່ໝວດໝູ່ຕ້ອງບໍ່ເກີນ 80 ຕົວອັກສອນ");
-    if (old) {
-      await update(dbRef(db, `products/${id}`), payload);
-    } else {
-      payload.createdAt = Date.now();
-      await set(dbRef(db, `products/${id}`), payload);
-    }
+    formMessage.textContent = "ກຳລັງຂຽນຂໍ້ມູນລົງຖານຂໍ້ມູນ…";
+    const write = old
+      ? update(dbRef(db, `products/${id}`), payload)
+      : (payload.createdAt = Date.now(), set(dbRef(db, `products/${id}`), payload));
+    await withTimeout(
+      write, 20000,
+      "ຖານຂໍ້ມູນບໍ່ຕອບກັບພາຍໃນ 20 ວິນາທີ. ອາດເປັນອິນເຕີເນັດ, Database Rules ຫຼື Firebase. ກວດລາຍການສິນຄ້າກ່ອນລອງບັນທຶກອີກຄັ້ງ"
+    );
     formMessage.textContent = "ບັນທຶກສິນຄ້າສຳເລັດແລ້ວ";
     formMessage.className = "small status";
     resetForm();
   } catch (error) {
-    formMessage.textContent = `ບັນທຶກບໍ່ສຳເລັດ: ${error.message}`;
+    console.error("Product save failed:", error);
+    const detail = error?.code === "storage/unauthorized" || error?.code === "PERMISSION_DENIED"
+      ? "ບໍ່ມີສິດບັນທຶກ. ກະລຸນາກວດ Firebase Rules ແລະ UID"
+      : error?.code === "storage/retry-limit-exceeded" || error?.code === "storage/canceled"
+        ? "ອັບໂຫຼດຮູບບໍ່ສຳເລັດ. ກວດອິນເຕີເນັດແລ້ວລອງໃໝ່"
+        : error.message || "ກະລຸນາກວດອິນເຕີເນັດແລ້ວລອງໃໝ່";
+    formMessage.textContent = `ບັນທຶກບໍ່ສຳເລັດ: ${detail}`;
     formMessage.className = "small error";
   } finally {
     saveButton.disabled = false;
